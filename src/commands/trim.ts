@@ -1,4 +1,4 @@
-import { execSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { basename } from "node:path";
 import { findMostRecentVideo, PATHS, ensureDirectories } from "../utils/paths.js";
 
@@ -16,9 +16,9 @@ export function trim(): void {
   console.log(`Opening: ${basename(videoPath)}`);
   console.log();
 
-  // Open iMovie and reveal file in Finder
-  execSync(`open -a "iMovie"`);
-  execSync(`open -R "${videoPath}"`);
+  // SECURITY: Use spawnSync to avoid command injection via videoPath
+  spawnSync("open", ["-a", "iMovie"]);
+  spawnSync("open", ["-R", videoPath]);
 
   console.log("Edit in iMovie:");
   console.log("   1. Create new Movie project");

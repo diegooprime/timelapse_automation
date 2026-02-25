@@ -1,6 +1,6 @@
 import { copyFileSync, unlinkSync, existsSync } from "node:fs";
-import { join, dirname, basename } from "node:path";
-import { execSync } from "node:child_process";
+import { join, basename } from "node:path";
+import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import {
   findTrimmedVideo,
@@ -73,8 +73,8 @@ export async function processTimelapse(hours: number): Promise<void> {
         blobUrl = await uploadToVercel(tempOutput, blobName);
         console.log(`Uploaded: ${blobName}`);
 
-        // Copy URL to clipboard
-        execSync(`echo "${blobUrl}" | pbcopy`);
+        // SECURITY: Use spawnSync to avoid command injection via blobUrl
+        spawnSync("pbcopy", [], { input: blobUrl, stdio: ["pipe", "inherit", "inherit"] });
         console.log(`URL copied to clipboard`);
       } catch (err) {
         console.error(`\nUpload failed: ${err instanceof Error ? err.message : err}`);
