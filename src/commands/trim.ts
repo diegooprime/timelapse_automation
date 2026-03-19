@@ -1,15 +1,15 @@
 import { spawnSync } from "node:child_process";
 import { basename } from "node:path";
-import { findMostRecentVideo, PATHS, ensureDirectories } from "../utils/paths.js";
+import { findRawVideo, PATHS, ensureDirectories } from "../utils/paths.js";
 
 export function trim(): void {
   ensureDirectories();
 
-  const videoPath = findMostRecentVideo(PATHS.raw);
+  const videoPath = findRawVideo();
 
   if (!videoPath) {
-    console.error("Error: No video found in timelapses-raw folder");
-    console.error(`   Path: ${PATHS.raw}`);
+    console.error("Error: No video found");
+    console.error(`   Checked: ~/Downloads (last 2 hours) and ${PATHS.raw}`);
     process.exit(1);
   }
 

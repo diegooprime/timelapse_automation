@@ -5,7 +5,7 @@ vi.mock("node:child_process", () => ({
 }));
 
 vi.mock("../src/utils/paths.js", () => ({
-  findMostRecentVideo: vi.fn(),
+  findRawVideo: vi.fn(),
   PATHS: { raw: "/tmp/test-raw", archive: "/tmp/test-archive", downloads: "/tmp/test-dl" },
   ensureDirectories: vi.fn(),
 }));
@@ -23,7 +23,7 @@ describe("trim command", () => {
     }));
 
     vi.doMock("../src/utils/paths.js", () => ({
-      findMostRecentVideo: vi.fn().mockReturnValue("/tmp/test-raw/video.mp4"),
+      findRawVideo: vi.fn().mockReturnValue("/tmp/test-raw/video.mp4"),
       PATHS: { raw: "/tmp/test-raw", archive: "/tmp/test-archive", downloads: "/tmp/test-dl" },
       ensureDirectories: vi.fn(),
     }));
@@ -52,7 +52,7 @@ describe("trim command", () => {
 
   it("exits when no video found", async () => {
     const paths = await import("../src/utils/paths.js");
-    vi.mocked(paths.findMostRecentVideo).mockReturnValue(null);
+    vi.mocked(paths.findRawVideo).mockReturnValue(null);
 
     expect(() => trim()).toThrow("process.exit(1)");
   });

@@ -11,6 +11,7 @@ export const PATHS = {
   raw: join(ICLOUD_BASE, "timelapses-raw"),
   archive: join(ICLOUD_BASE, "timelapses"),
   downloads: join(homedir(), "Downloads"),
+  desktop: join(homedir(), "Desktop"),
 };
 
 export function ensureDirectories(): void {
@@ -39,24 +40,36 @@ export function findMostRecentVideo(dir: string): string | null {
   return files.length > 0 ? files[0].path : null;
 }
 
+export function findRawVideo(): string | null {
+  // Check Downloads for most recent video (AirDropped from phone)
+  const downloadVideo = findMostRecentVideo(PATHS.downloads);
+  if (downloadVideo) return downloadVideo;
+
+  // Fall back to iCloud timelapses-raw
+  return findMostRecentVideo(PATHS.raw);
+}
+
 export function findTrimmedVideo(): string | null {
-  // Check Downloads for recent QuickTime saves (last 30 minutes)
+  // Check Downloads and Desktop for recent iMovie exports (last 30 minutes)
   const thirtyMinutesAgo = Date.now() - 30 * 60 * 1000;
+  const searchDirs = [PATHS.downloads, PATHS.desktop];
 
-  if (existsSync(PATHS.downloads)) {
-    const downloadFiles = readdirSync(PATHS.downloads)
-      .filter((f) => /\.(mp4|mov|m4v)$/i.test(f))
-      .map((f) => ({
-        name: f,
-        path: join(PATHS.downloads, f),
-        mtime: statSync(join(PATHS.downloads, f)).mtime.getTime(),
-      }))
-      .filter((f) => f.mtime > thirtyMinutesAgo)
-      .sort((a, b) => b.mtime - a.mtime);
+  const recentFiles = searchDirs
+    .filter((dir) => existsSync(dir))
+    .flatMap((dir) =>
+      readdirSync(dir)
+        .filter((f) => /\.(mp4|mov|m4v)$/i.test(f))
+        .map((f) => ({
+          name: f,
+          path: join(dir, f),
+          mtime: statSync(join(dir, f)).mtime.getTime(),
+        }))
+    )
+    .filter((f) => f.mtime > thirtyMinutesAgo)
+    .sort((a, b) => b.mtime - a.mtime);
 
-    if (downloadFiles.length > 0) {
-      return downloadFiles[0].path;
-    }
+  if (recentFiles.length > 0) {
+    return recentFiles[0].path;
   }
 
   // Fall back to timelapses-raw

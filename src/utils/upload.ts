@@ -18,6 +18,7 @@ export async function uploadToVercel(
 
   const blob = await put(blobName, fileBuffer, {
     access: "public",
+    addRandomSuffix: false,
     token,
   });
 
