@@ -1,12 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { spawnSync, execSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 
 vi.mock("node:child_process", () => ({
-  execSync: vi.fn(),
   spawnSync: vi.fn(),
 }));
 
-const mockedExecSync = vi.mocked(execSync);
 const mockedSpawnSync = vi.mocked(spawnSync);
 
 describe("ffmpeg utility", () => {
@@ -25,16 +23,48 @@ describe("ffmpeg utility", () => {
 
   describe("checkFfmpeg", () => {
     it("returns true when both ffmpeg and ffprobe are found", () => {
-      mockedExecSync.mockReturnValue(Buffer.from("/usr/local/bin/ffmpeg"));
+      const successResult = {
+        stdout: Buffer.from("/usr/local/bin/ffmpeg"),
+        stderr: Buffer.from(""),
+        status: 0 as number | null,
+        signal: null as NodeJS.Signals | null,
+        pid: 0,
+        output: [] as string[],
+        error: undefined,
+      };
+      mockedSpawnSync
+        .mockReturnValueOnce(successResult)
+        .mockReturnValueOnce(successResult);
       expect(checkFfmpeg()).toBe(true);
-      expect(mockedExecSync).toHaveBeenCalledWith("which ffmpeg", { stdio: "pipe" });
-      expect(mockedExecSync).toHaveBeenCalledWith("which ffprobe", { stdio: "pipe" });
+      expect(mockedSpawnSync).toHaveBeenCalledWith("which", ["ffmpeg"], { stdio: "pipe" });
+      expect(mockedSpawnSync).toHaveBeenCalledWith("which", ["ffprobe"], { stdio: "pipe" });
     });
 
     it("returns false when ffmpeg is not found", () => {
-      mockedExecSync.mockImplementation(() => {
-        throw new Error("not found");
-      });
+      const failResult = {
+        stdout: Buffer.from(""),
+        stderr: Buffer.from(""),
+        status: 1 as number | null,
+        signal: null as NodeJS.Signals | null,
+        pid: 0,
+        output: [] as string[],
+        error: undefined,
+      };
+      mockedSpawnSync.mockReturnValue(failResult);
+      expect(checkFfmpeg()).toBe(false);
+    });
+
+    it("returns false when spawn errors", () => {
+      const errorResult = {
+        stdout: Buffer.from(""),
+        stderr: Buffer.from(""),
+        status: null as number | null,
+        signal: null as NodeJS.Signals | null,
+        pid: 0,
+        output: [] as string[],
+        error: new Error("ENOENT"),
+      };
+      mockedSpawnSync.mockReturnValue(errorResult);
       expect(checkFfmpeg()).toBe(false);
     });
   });
@@ -87,6 +117,34 @@ describe("ffmpeg utility", () => {
 
       expect(() => getVideoDuration("/any.mp4")).toThrow("Failed to get video duration");
     });
+
+    it("throws when ffprobe returns non-numeric output", () => {
+      mockedSpawnSync.mockReturnValue({
+        stdout: Buffer.from("N/A\n"),
+        stderr: Buffer.from(""),
+        status: 0,
+        signal: null,
+        pid: 0,
+        output: [],
+        error: undefined,
+      });
+
+      expect(() => getVideoDuration("/video.mp4")).toThrow("Invalid video duration");
+    });
+
+    it("throws when duration is zero", () => {
+      mockedSpawnSync.mockReturnValue({
+        stdout: Buffer.from("0\n"),
+        stderr: Buffer.from(""),
+        status: 0,
+        signal: null,
+        pid: 0,
+        output: [],
+        error: undefined,
+      });
+
+      expect(() => getVideoDuration("/video.mp4")).toThrow("Invalid video duration");
+    });
   });
 
   describe("processVideo", () => {
@@ -131,6 +189,13 @@ describe("ffmpeg utility", () => {
       });
 
       expect(() => processVideo("/in.mp4", "/out.mp4", 10)).toThrow("FFmpeg processing failed");
+    });
+
+    it("throws on invalid speed factor", () => {
+      expect(() => processVideo("/in.mp4", "/out.mp4", 0)).toThrow("Invalid speed factor");
+      expect(() => processVideo("/in.mp4", "/out.mp4", -1)).toThrow("Invalid speed factor");
+      expect(() => processVideo("/in.mp4", "/out.mp4", Infinity)).toThrow("Invalid speed factor");
+      expect(() => processVideo("/in.mp4", "/out.mp4", NaN)).toThrow("Invalid speed factor");
     });
 
     it("computes correct PTS filter for speed factor", () => {

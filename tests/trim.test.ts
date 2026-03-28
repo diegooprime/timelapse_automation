@@ -47,7 +47,7 @@ describe("trim command", () => {
 
     const { spawnSync } = await import("node:child_process");
     expect(spawnSync).toHaveBeenCalledWith("open", ["-a", "iMovie"]);
-    expect(spawnSync).toHaveBeenCalledWith("open", ["-R", "/tmp/test-raw/video.mp4"]);
+    expect(spawnSync).toHaveBeenCalledWith("open", ["-R", "--", "/tmp/test-raw/video.mp4"]);
   });
 
   it("exits when no video found", async () => {

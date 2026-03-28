@@ -9,6 +9,7 @@ vi.mock("node:fs", async (importOriginal) => {
   return {
     ...actual,
     readFileSync: vi.fn().mockReturnValue(Buffer.from("fake-video-data")),
+    statSync: vi.fn().mockReturnValue({ size: 1024 }),
   };
 });
 
@@ -75,6 +76,22 @@ describe("upload utility", () => {
 
       await expect(mod.uploadToVercel("/tmp/v.mp4", "v.mp4")).rejects.toThrow(
         "BLOB_READ_WRITE_TOKEN not set",
+      );
+    });
+
+    it("throws when file exceeds size limit", async () => {
+      process.env.BLOB_READ_WRITE_TOKEN = "test-token";
+      vi.resetModules();
+
+      // Mock statSync to return a size over 500 MB
+      const { statSync } = await import("node:fs");
+      vi.mocked(statSync).mockReturnValue({
+        size: 600 * 1024 * 1024,
+      } as any);
+
+      const mod = await import("../src/utils/upload.js");
+      await expect(mod.uploadToVercel("/tmp/big.mp4", "big.mp4")).rejects.toThrow(
+        "File too large for upload",
       );
     });
   });

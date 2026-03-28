@@ -131,6 +131,10 @@ describe("processTimelapse", () => {
     await expect(processTimelapse(-1)).rejects.toThrow("process.exit(1)");
   });
 
+  it("exits on Infinity hours", async () => {
+    await expect(processTimelapse(Infinity)).rejects.toThrow("process.exit(1)");
+  });
+
   it("exits when ffmpeg is not found", async () => {
     const { checkFfmpeg } = await import("../src/utils/ffmpeg.js");
     vi.mocked(checkFfmpeg).mockReturnValue(false);

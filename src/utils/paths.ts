@@ -41,11 +41,29 @@ export function findMostRecentVideo(dir: string): string | null {
 }
 
 export function findRawVideo(): string | null {
-  // Check Downloads for most recent video (AirDropped from phone)
-  const downloadVideo = findMostRecentVideo(PATHS.downloads);
-  if (downloadVideo) return downloadVideo;
+  // Check Downloads and Desktop for recent video (AirDropped from phone, last 2 hours)
+  const twoHoursAgo = Date.now() - 2 * 60 * 60 * 1000;
+  const searchDirs = [PATHS.downloads, PATHS.desktop];
 
-  // Fall back to iCloud timelapses-raw
+  const recentFiles = searchDirs
+    .filter((dir) => existsSync(dir))
+    .flatMap((dir) =>
+      readdirSync(dir)
+        .filter((f) => /\.(mp4|mov|m4v)$/i.test(f))
+        .map((f) => ({
+          name: f,
+          path: join(dir, f),
+          mtime: statSync(join(dir, f)).mtime.getTime(),
+        }))
+    )
+    .filter((f) => f.mtime > twoHoursAgo)
+    .sort((a, b) => b.mtime - a.mtime);
+
+  if (recentFiles.length > 0) {
+    return recentFiles[0].path;
+  }
+
+  // Fall back to iCloud timelapses-raw (no time limit — these are explicitly raw timelapses)
   return findMostRecentVideo(PATHS.raw);
 }
 

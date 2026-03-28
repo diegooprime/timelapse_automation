@@ -16,7 +16,7 @@ export async function processTimelapse(hours: number): Promise<void> {
   ensureDirectories();
 
   // Validate hours
-  if (isNaN(hours) || hours <= 0) {
+  if (!isFinite(hours) || hours <= 0) {
     console.error("Error: Please provide valid hours (e.g., tl process 4.5)");
     process.exit(1);
   }

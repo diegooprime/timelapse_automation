@@ -1,13 +1,9 @@
-import { execSync, spawnSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 
 export function checkFfmpeg(): boolean {
-  try {
-    execSync("which ffmpeg", { stdio: "pipe" });
-    execSync("which ffprobe", { stdio: "pipe" });
-    return true;
-  } catch {
-    return false;
-  }
+  const ffmpeg = spawnSync("which", ["ffmpeg"], { stdio: "pipe" });
+  const ffprobe = spawnSync("which", ["ffprobe"], { stdio: "pipe" });
+  return !ffmpeg.error && ffmpeg.status === 0 && !ffprobe.error && ffprobe.status === 0;
 }
 
 export function getVideoDuration(videoPath: string): number {
@@ -25,7 +21,11 @@ export function getVideoDuration(videoPath: string): number {
     throw new Error(`Failed to get video duration: ${result.stderr?.toString()}`);
   }
 
-  return parseFloat(result.stdout.toString().trim());
+  const duration = parseFloat(result.stdout.toString().trim());
+  if (isNaN(duration) || duration <= 0) {
+    throw new Error(`Invalid video duration: ${result.stdout.toString().trim()}`);
+  }
+  return duration;
 }
 
 export function processVideo(
@@ -33,6 +33,10 @@ export function processVideo(
   outputPath: string,
   speedFactor: number
 ): void {
+  if (!isFinite(speedFactor) || speedFactor <= 0) {
+    throw new Error(`Invalid speed factor: ${speedFactor}`);
+  }
+
   // Use setpts to speed up video, strip audio
   const ptsFilter = `setpts=${(1 / speedFactor).toFixed(6)}*PTS`;
 

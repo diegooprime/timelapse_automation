@@ -131,6 +131,68 @@ describe("findTrimmedVideo algorithm", () => {
   });
 });
 
+describe("findRawVideo algorithm", () => {
+  function findMostRecentVideoLocal(dir: string): string | null {
+    if (!existsSync(dir)) return null;
+    const files = readdirSync(dir)
+      .filter((f) => /\.(mp4|mov|m4v)$/i.test(f))
+      .map((f) => ({
+        name: f,
+        path: join(dir, f),
+        mtime: statSync(join(dir, f)).mtime.getTime(),
+      }))
+      .sort((a, b) => b.mtime - a.mtime);
+    return files.length > 0 ? files[0].path : null;
+  }
+
+  function findRawVideo(): string | null {
+    const twoHoursAgo = Date.now() - 2 * 60 * 60 * 1000;
+    const searchDirs = [TEST_DOWNLOADS];
+
+    const recentFiles = searchDirs
+      .filter((dir) => existsSync(dir))
+      .flatMap((dir) =>
+        readdirSync(dir)
+          .filter((f) => /\.(mp4|mov|m4v)$/i.test(f))
+          .map((f) => ({
+            name: f,
+            path: join(dir, f),
+            mtime: statSync(join(dir, f)).mtime.getTime(),
+          }))
+      )
+      .filter((f) => f.mtime > twoHoursAgo)
+      .sort((a, b) => b.mtime - a.mtime);
+
+    if (recentFiles.length > 0) {
+      return recentFiles[0].path;
+    }
+
+    return findMostRecentVideoLocal(TEST_RAW);
+  }
+
+  it("returns recent download video within 2 hour window", () => {
+    const videoPath = join(TEST_DOWNLOADS, "raw.mp4");
+    writeFileSync(videoPath, "fake");
+    expect(findRawVideo()).toBe(videoPath);
+  });
+
+  it("ignores old downloads and falls back to raw", () => {
+    const oldDownload = join(TEST_DOWNLOADS, "old.mp4");
+    writeFileSync(oldDownload, "fake");
+    const past = new Date(Date.now() - 3 * 60 * 60 * 1000);
+    utimesSync(oldDownload, past, past);
+
+    const rawVideo = join(TEST_RAW, "raw.mp4");
+    writeFileSync(rawVideo, "fake");
+
+    expect(findRawVideo()).toBe(rawVideo);
+  });
+
+  it("returns null when no videos found anywhere", () => {
+    expect(findRawVideo()).toBeNull();
+  });
+});
+
 describe("getNextSessionNumber algorithm", () => {
   function getNextSessionNumber(): number {
     if (!existsSync(TEST_ARCHIVE)) return 1;

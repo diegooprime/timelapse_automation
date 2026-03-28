@@ -9,7 +9,7 @@ export function trim(): void {
 
   if (!videoPath) {
     console.error("Error: No video found");
-    console.error(`   Checked: ~/Downloads (last 2 hours) and ${PATHS.raw}`);
+    console.error(`   Checked: ~/Downloads, ~/Desktop (last 2 hours) and ${PATHS.raw}`);
     process.exit(1);
   }
 
@@ -18,7 +18,7 @@ export function trim(): void {
 
   // SECURITY: Use spawnSync to avoid command injection via videoPath
   spawnSync("open", ["-a", "iMovie"]);
-  spawnSync("open", ["-R", videoPath]);
+  spawnSync("open", ["-R", "--", videoPath]);
 
   console.log("Edit in iMovie:");
   console.log("   1. Create new Movie project");
